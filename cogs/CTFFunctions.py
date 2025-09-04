@@ -168,16 +168,16 @@ class CTFCommands(commands.Cog):
             else "Unknown"
         )
         embed = discord.Embed(
-            title=match["title"],
-            url=match["link"],
-            description=match["summary"][:500] + "..." if len(match["summary"]) > 500 else match["summary"],
-            color=discord.Color.blue(),
+            title = match["title"],
+            url = match["link"],
+            description = match["summary"][:500] + "..." if len(match["summary"]) > 500 else match["summary"],
+            color = discord.Color.blue(),
         )
-        embed.add_field(name="Start Date", value=start_str, inline=False)
+        embed.add_field(name = "Start Date", value = start_str, inline = False)
         await interaction.response.send_message(embed=embed)
 
     # /debugctfs
-    @app_commands.command(name="debugctfs", description="Dump all feed CTFs")
+    @app_commands.command(name = "debugctfs", description = "Dump all feed CTFs")
     async def debugctfs(self, interaction: discord.Interaction):
         ctfs = fetch_upcoming_ctfs()
         if not ctfs:
@@ -194,7 +194,7 @@ class CTFCommands(commands.Cog):
         if len(msg) > 2000:
             with open("debug_ctfs.txt", "w", encoding="utf-8") as f:
                 f.write(msg)
-            await interaction.response.send_message(file=discord.File("debug_ctfs.txt"))
+            await interaction.response.send_message(file = discord.File("debug_ctfs.txt"))
         else:
             await interaction.response.send_message(msg)
 
@@ -217,4 +217,4 @@ class CTFCommands(commands.Cog):
 
 # Discord Setup
 async def setup(bot):
-    await bot.add_cog(CTFCommands(bot), guild=discord.Object(id=GUILD_ID))
+    await bot.add_cog(CTFCommands(bot), guild = discord.Object(id = GUILD_ID))
