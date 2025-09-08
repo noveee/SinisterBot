@@ -73,6 +73,7 @@ class CTFCommands(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
+# ------------------ General Commands Section ------------------
     # /ping
     @app_commands.command(name="ping", description="Sanity check")
     async def ping(self, interaction: discord.Interaction):
@@ -123,6 +124,8 @@ class CTFCommands(commands.Cog):
         )
         conn.commit()
         await interaction.response.send_message(f"Saved {ctf_name}: {rank}")
+
+    # /delrank
 
     # /getrank
     @app_commands.command(name="getrank", description="Get rank for a CTF")
@@ -176,6 +179,7 @@ class CTFCommands(commands.Cog):
         embed.add_field(name = "Start Date", value = start_str, inline = False)
         await interaction.response.send_message(embed=embed)
 
+# ------------------ Debugging Section ------------------
     # /debugctfs
     @app_commands.command(name = "debugctfs", description = "Dump all feed CTFs")
     async def debugctfs(self, interaction: discord.Interaction):
