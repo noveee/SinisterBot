@@ -94,7 +94,8 @@ class CTFCommands(commands.Cog):
             return
         msg = "**CTFs in next 7 days:**\n"
         for c in sorted(ctfs, key=lambda x: x["start_date"]):
-            msg += f"- {c['title']} | {c['start_date'].strftime('%Y-%m-%d %H:%M UTC')} | {c['link']}\n"
+            ts = int(c['start_date'].timestamp())
+            msg += f"- {c['title']} | <t:{ts}:R> | <t:{ts}:F> | {c['link']}\n" # Time Left | CTF Date | Link
         await interaction.response.send_message(msg)
 
     # /month
@@ -113,7 +114,8 @@ class CTFCommands(commands.Cog):
             return
         msg = "**CTFs this month:**\n"
         for c in sorted(ctfs, key=lambda x: x["start_date"]):
-            msg += f"- {c['title']} | {c['start_date'].strftime('%Y-%m-%d %H:%M UTC')} | {c['link']}\n"
+            ts = int(c['start_date'].timestamp())
+            msg += f"- {c['title']} | <t:{ts}:R> | <t:{ts}:F> | {c['link']}\n" # Time Left | CTF Date | Link
         await interaction.response.send_message(msg)
 
     # /rank
