@@ -27,11 +27,14 @@ def fetch_ctfs(feed_url: str):
     ctfs = []
     for entry in feed.entries:
         start_date = None
+        
+        # Grabbing entry based on start_date
         if hasattr(entry, "start_date"):
             try:
                 start_date = dateparser.parse(entry.start_date).astimezone(timezone.utc)
             except Exception:
                 pass
+        # If start_date was not used, use published for regex
         elif hasattr(entry, "published"):
             try:
                 start_date = dateparser.parse(entry.published).astimezone(timezone.utc)
@@ -62,9 +65,9 @@ Commands
 /ping: Sanity Check 
 /week: Shows CTFs happening within 7 days
 /month: Shows CTFs happening within the current month
-/rank <ctf> <rank>: Input CTF Rank into DB 
-/getrank <ctf>: Shows given Rank for CTF
-/allranks: Dumps the Rank DB 
+/rank <ctf> <rank>: Input CTF rank into DB 
+/getrank <ctf>: Shows given rank for CTF
+/allranks: Dumps the rank DB 
 /ctfinfo <ctf>: Prints raw info for given CTF 
 /debugctfs: Prints full raw RSS feed and creates file 
 /debugraw; Prints raw info for the most recent CTF
@@ -82,44 +85,58 @@ class CTFCommands(commands.Cog):
     # /week
     @app_commands.command(name="week", description="Show CTFs in the next 7 days")
     async def week(self, interaction: discord.Interaction):
+        
+        # Grabbing current time and end of week variable
         now = datetime.now(timezone.utc)
         end = now + timedelta(days=7)
+        
+        # Putting all CTFs happening within a week into a list using comprehension
         ctfs = [
-            c
-            for c in fetch_upcoming_ctfs()
+            c for c in fetch_upcoming_ctfs()
             if c["start_date"] and now <= c["start_date"] <= end
         ]
+        
+        # If no CTFs happening within a week
         if not ctfs:
             await interaction.response.send_message("No CTFs in next 7 days.")
             return
+        
+        # Creating message variable that outputs all results in a clean format 
         msg = "**CTFs in next 7 days:**\n"
         for c in sorted(ctfs, key=lambda x: x["start_date"]):
             ts = int(c['start_date'].timestamp())
-            msg += f"- {c['title']} | <t:{ts}:R> | <t:{ts}:F> | {c['link']}\n" # Time Left | CTF Date | Link
+            msg += f"- {c['title']} | <t:{ts}:R> | <t:{ts}:F> | {c['link']}\n" # Title | Time Left | CTF Date | Link
         await interaction.response.send_message(msg)
 
     # /month
     @app_commands.command(name="month", description="Show CTFs this month")
     async def month(self, interaction: discord.Interaction):
         now = datetime.now(timezone.utc)
+        
+        # Using list comprehension to grab all CTFs happening in this current month & year
         ctfs = [
-            c
-            for c in fetch_upcoming_ctfs()
+            c for c in fetch_upcoming_ctfs()
             if c["start_date"]
             and c["start_date"].month == now.month
             and c["start_date"].year == now.year
         ]
+        
+        # If no CTFs are happening within this month
         if not ctfs:
             await interaction.response.send_message("No CTFs this month.")
             return
+        
+        # Creating message variable that outputs all results in a clean format 
         msg = "**CTFs this month:**\n"
         for c in sorted(ctfs, key=lambda x: x["start_date"]):
             ts = int(c['start_date'].timestamp())
-            msg += f"- {c['title']} | <t:{ts}:R> | <t:{ts}:F> | {c['link']}\n" # Time Left | CTF Date | Link
+            msg += f"- {c['title']} | <t:{ts}:R> | <t:{ts}:F> | {c['link']}\n" # Title | Time Left | CTF Date | Link
         await interaction.response.send_message(msg)
 
     # /rank
     @app_commands.command(name="rank", description="Save rank for a CTF")
+    
+    # Saves CTF rank in DB and replaces rank if there is an existing one
     async def rank(self, interaction: discord.Interaction, ctf_name: str, rank: str):
         cursor.execute(
             "REPLACE INTO ranks (ctf_name, rank) VALUES (?, ?)", (ctf_name, rank)
@@ -129,6 +146,8 @@ class CTFCommands(commands.Cog):
 
     # /getrank
     @app_commands.command(name="getrank", description="Get rank for a CTF")
+    
+    # Gets a given CTF rank from the DB 
     async def getrank(self, interaction: discord.Interaction, ctf_name: str):
         cursor.execute("SELECT rank FROM ranks WHERE ctf_name = ?", (ctf_name,))
         r = cursor.fetchone()
@@ -139,12 +158,18 @@ class CTFCommands(commands.Cog):
 
     # /allranks
     @app_commands.command(name="allranks", description="Show all saved CTF ranks")
+    
+    # Dumps the entire rank DB 
     async def allranks(self, interaction: discord.Interaction):
         cursor.execute("SELECT ctf_name, rank FROM ranks")
         rows = cursor.fetchall()
+        
+        # Incase a DB has not been created
         if not rows:
             await interaction.response.send_message("No ranks saved yet.")
             return
+        
+        # Creating message variable that outputs all ranks in a clean format 
         msg = "**Saved CTF Ranks:**\n"
         for ctf, rank in rows:
             msg += f"- {ctf}: {rank}\n"
@@ -153,10 +178,10 @@ class CTFCommands(commands.Cog):
     # /ctfinfo
     @app_commands.command(name="ctfinfo", description="Get info about a specific CTF")
     async def ctfinfo(self, interaction: discord.Interaction, ctf_name: str):
-        # Search upcoming first, then past events
+        
+        # Search upcoming first, then past events, and if nothing found, prints nothing found
         ctfs = fetch_upcoming_ctfs()
         match = next((c for c in ctfs if ctf_name.lower() in c["title"].lower()), None)
-
         if not match:
             ctfs = fetch_past_ctfs()
             match = next((c for c in ctfs if ctf_name.lower() in c["title"].lower()), None)
@@ -165,6 +190,7 @@ class CTFCommands(commands.Cog):
             await interaction.response.send_message(f"No CTF found for: {ctf_name}")
             return
 
+        # Printing in a raw format instead of cleaned up
         start_str = (
             match["start_date"].strftime("%Y-%m-%d %H:%M UTC")
             if match["start_date"]
