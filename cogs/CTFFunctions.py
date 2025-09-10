@@ -127,8 +127,6 @@ class CTFCommands(commands.Cog):
         conn.commit()
         await interaction.response.send_message(f"Saved {ctf_name}: {rank}")
 
-    # /delrank
-
     # /getrank
     @app_commands.command(name="getrank", description="Get rank for a CTF")
     async def getrank(self, interaction: discord.Interaction, ctf_name: str):

@@ -23,6 +23,10 @@ def fetch_cyber_news():
 '''
 Commands
 
+To Add
+https://portswigger.net/research/rss
+https://rss.com/podcasts/ctbbpodcast/
+
 /cybernews: Prints recent CyberWire episodes and links
 '''
 class NewsCommands(commands.Cog):

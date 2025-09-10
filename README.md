@@ -1,3 +1,7 @@
 # The Bot of Sin
 Usage notes and such to be added... 
-(yes im a lil lazy)
+
+---
+## Adding
+- CTF Queuing 
+- Better RSS parsing
