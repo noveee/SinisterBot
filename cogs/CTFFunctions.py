@@ -179,7 +179,7 @@ class CTFCommands(commands.Cog):
     @app_commands.command(name="ctfinfo", description="Get info about a specific CTF")
     async def ctfinfo(self, interaction: discord.Interaction, ctf_name: str):
         
-        # Search upcoming first, then past events, and if nothing found, prints nothing found
+        # Search upcoming first, then past events
         ctfs = fetch_upcoming_ctfs()
         match = next((c for c in ctfs if ctf_name.lower() in c["title"].lower()), None)
         if not match:
@@ -190,19 +190,43 @@ class CTFCommands(commands.Cog):
             await interaction.response.send_message(f"No CTF found for: {ctf_name}")
             return
 
-        # Printing in a raw format instead of cleaned up
-        start_str = (
-            match["start_date"].strftime("%Y-%m-%d %H:%M UTC")
-            if match["start_date"]
-            else "Unknown"
-        )
+        # Using discord date formatting
+        if match["start_date"]:
+            ts = int(match["start_date"].timestamp())
+            start_str = f"<t:{ts}:F> (<t:{ts}:R>)"
+        else:
+            start_str = "Unknown"
+
+        # Cleaning up the raw HTML for the CTF summary
+        summary = match["summary"]
+        summary = summary.replace("<br />", "\n").replace("<br/>", "\n").replace("<br>", "\n")
+        summary = summary.replace("&mdash;", "—").replace("&nbsp;", " ")
+        summary = summary.replace("<b>", "").replace("</b>", "")
+        summary = summary.replace("<i>", "").replace("</i>", "")
+        
+        # A long and drawn out way to remove the <a> tag and fix links
+        while "<a " in summary:
+            start = summary.find("<a ")
+            end = summary.find(">", start)
+            if end == -1:
+                break
+            summary = summary[:start] + summary[end+1:]
+        summary = summary.replace("</a>", "")
+
+        # Cutting the summary down
+        if len(summary) > 500:
+            summary = summary[:500] + "..."
+            
         embed = discord.Embed(
-            title = match["title"],
-            url = match["link"],
-            description = match["summary"][:500] + "..." if len(match["summary"]) > 500 else match["summary"],
-            color = discord.Color.blue(),
+            title=match["title"],
+            url=match["link"],  # main event link
+            description=summary.strip(),
+            color=discord.Color.fuchsia(),
         )
-        embed.add_field(name = "Start Date", value = start_str, inline = False)
+        
+        embed.add_field(name="Start Date", value=start_str, inline=False)
+        embed.add_field(name="Event Link", value=match["link"], inline=False)
+
         await interaction.response.send_message(embed=embed)
 
 # ------------------ Debugging Section ------------------
