@@ -14,9 +14,17 @@ from BotOfSin import GUILD_ID
 # ------------------ DB Setup ------------------
 conn = sqlite3.connect("ctf_ranks.db")
 cursor = conn.cursor()
+
+# Rank database
 cursor.execute(
     "CREATE TABLE IF NOT EXISTS ranks (ctf_name TEXT PRIMARY KEY, rank TEXT)"
 )
+
+# Queue database
+cursor.execute(
+    "CREATE TABLE IF NOT EXISTS queue (ctf_name TEXT PRIMARY KEY, start_time INTEGER, link TEXT)"
+)
+
 conn.commit()
 # ------------------ DB Setup End ------------------
 
@@ -174,7 +182,73 @@ class CTFCommands(commands.Cog):
         for ctf, rank in rows:
             msg += f"- {ctf}: {rank}\n"
         await interaction.response.send_message(msg)
+    
+    # /addctf
+    @app_commands.command(name="addctf", description="Add a CTF to the signup queue")
 
+    # Searching for the given CTF, grabbing the name, start date, and calculating the time till it starts
+    async def addctf(self, interaction: discord.Interaction, ctf_name: str):
+        ctfs = fetch_upcoming_ctfs()
+        match = next((c for c in ctfs if ctf_name.lower() in c["title"].lower()), None)
+
+        if not match:
+            await interaction.response.send_message(f"No upcoming CTF found for: {ctf_name}")
+            return
+
+        if not match["start_date"]:
+            await interaction.response.send_message(f"{match['title']} has no known start date.")
+            return
+
+        ts = int(match["start_date"].timestamp())
+
+        # Adding the CTF into the DB along with the other information
+        try:
+            cursor.execute(
+                "REPLACE INTO queue (ctf_name, start_time, link) VALUES (?, ?, ?)",
+                (match["title"], ts, match["link"]),
+            )
+            conn.commit()
+            await interaction.response.send_message(
+                f"Added **{match['title']}** to queue! Starts <t:{ts}:R> (<t:{ts}:F>)"
+            )
+        except Exception as e:
+            await interaction.response.send_message(f"Error adding to queue: {e}")
+
+    # /queue
+    @app_commands.command(name="queue", description="Show queued CTFs")
+    
+    # Dumps the entire queue DB 
+    async def queue(self, interaction: discord.Interaction):
+        cursor.execute("SELECT ctf_name, start_time, link FROM queue ORDER BY start_time ASC")
+        rows = cursor.fetchall()
+
+        if not rows:
+            await interaction.response.send_message("The queue is empty.")
+            return
+
+        msg = "**Queued CTFs:**\n"
+        for name, ts, link in rows:
+            msg += f"- {name} | <t:{ts}:R> | <t:{ts}:F> | {link}\n"
+        await interaction.response.send_message(msg)
+
+    # /dequeue
+    @app_commands.command(name="dequeue", description="Remove a CTF from the signup queue")
+    
+    # Removes a given CTF from the DB
+    async def dequeue(self, interaction: discord.Interaction, ctf_name: str):
+        cursor.execute("SELECT ctf_name FROM queue WHERE LOWER(ctf_name) LIKE ?", (f"%{ctf_name.lower()}%",))
+        row = cursor.fetchone()
+
+        if not row:
+            await interaction.response.send_message(f"No CTF in queue matching: {ctf_name}")
+            return
+
+        cursor.execute("DELETE FROM queue WHERE ctf_name = ?", (row[0],))
+        conn.commit()
+
+        await interaction.response.send_message(f"Removed **{row[0]}** from the queue.")
+
+    
     # /ctfinfo
     @app_commands.command(name="ctfinfo", description="Get info about a specific CTF")
     async def ctfinfo(self, interaction: discord.Interaction, ctf_name: str):
@@ -253,10 +327,7 @@ class CTFCommands(commands.Cog):
             await interaction.response.send_message(msg)
 
     # /debugraw
-    @app_commands.command(
-        name="debugraw",
-        description="Show raw fields of first feed entry"
-    )
+    @app_commands.command(name="debugraw", description="Show raw fields of first feed entry")
     async def debugraw(self, interaction: discord.Interaction):
         ctfs = feedparser.parse("https://ctftime.org/event/list/upcoming/rss/").entries
         if not ctfs:
