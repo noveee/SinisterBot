@@ -33,14 +33,19 @@ Commands
 /ping: Sanity Check 
 /week: Shows CTFs happening within 7 days
 /month: Shows CTFs happening within the current month
+
 /rank <ctf> <rank>: Input CTF rank into DB 
 /getrank <ctf>: Shows given rank for CTF
 /allranks: Dumps the rank DB 
+
+/addctf <ctf>: Adds a given CTF to the queue DB
+/queue: Dumps the queue DB
+/dequeue <ctf>: Removes a CTF from the queue DB
+
 /ctfinfo <ctf>: Prints raw info for given CTF 
 /debugctfs: Prints full raw RSS feed and creates file 
 /debugraw; Prints raw info for the most recent CTF
 
-/cybernews: Prints recent CyberWire episodes and links
 '''
 
 async def main():
