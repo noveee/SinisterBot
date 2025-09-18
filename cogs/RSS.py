@@ -1,8 +1,9 @@
+# Imports
 import discord
 from discord.ext import commands
 from discord import app_commands
-from datetime import timedelta
 
+# Token
 from BotOfSin import GUILD_ID
 from .FeedUtils import parse_feed, filter_recent, make_paginated_view, clean_summary, clean_ctbb_summary
 
@@ -59,7 +60,7 @@ class NewsCommands(commands.Cog):
     @app_commands.command(name="ctbepisodes", description="List CTBB podcast episodes from the past 30 days")
     async def ctbepisodes(self, interaction: discord.Interaction):
         await interaction.response.defer()
-        episodes = parse_feed(CTBB_FEED, include_audio=True)
+        episodes = parse_feed(CTBB_FEED, include_audio=True, )
         recent = filter_recent(episodes, 30)
         if not recent:
             await interaction.followup.send("No recent CTBB episodes.")

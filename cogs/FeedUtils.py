@@ -11,6 +11,13 @@ from dateutil import parser as dateparser
 def clean_summary(summary: str, max_length: int = 1000) -> str:
     '''
     Cleans up html tags in the given RSS source and returns a clean version
+    
+    Args:
+        summary (str): Provided summary of the RSS source
+        max_length (Optional [int]): Maximum of length of summary to be used
+    
+    Returns:
+        str: Cleaned up summary with no tags
     '''
     
     if not summary:
@@ -28,6 +35,13 @@ def clean_summary(summary: str, max_length: int = 1000) -> str:
 def clean_ctbb_summary(summary: str, max_length: int = 800) -> str:
     '''
     Specialized cleaner for CTBB to get rid of footer notes
+    
+    Args:
+        summary (str): Provided summary of the RSS source
+        max_length (Optional [int]): Maximum of length of summary to be used
+    
+    Returns:
+        str: Cleaned up summary with no tags and no footer
     '''
     
     if not summary:
@@ -49,7 +63,14 @@ def clean_ctbb_summary(summary: str, max_length: int = 800) -> str:
 def parse_feed(feed_url: str, include_audio: bool = False):
     '''
     Grabs the feed for a given RSS source and retreives all needed information:
-        title, link, summary, published, and audio
+        title, link, summary, published, audio, and raw entry
+    
+    Args:
+        feed_url (str): The RSS source to be parsed through
+        include_audio (Optional [bool]): True if given source uses audio, False if audio is not used
+    
+    Returns:
+        dictionary: The title, link, summary, published date, audio link, and raw entry of each entry in the feed  
     '''
     
     feed = feedparser.parse(feed_url)
@@ -96,6 +117,12 @@ def parse_feed(feed_url: str, include_audio: bool = False):
 def parse_ctf_feed(feed_url: str):
     '''
     Specific handler for CTFtime source
+    
+    Args:
+        feed_url (str): The RSS source to be parsed through
+    
+    Returns:
+        dictionary: The title, link, summary, start date, and raw entry of each ctf entry 
     '''
     
     feed = feedparser.parse(feed_url)
@@ -127,6 +154,13 @@ def parse_ctf_feed(feed_url: str):
 def filter_recent(entries, days: int = 30):
     '''
     Search filter for the given RSS source
+    
+    Args:
+        entries (dictionary): Dictionary of entries to filter out
+        days (int): How many days to filter by
+    
+    Returns:
+        list: A list of entries before the cutoff date
     '''
     
     now = datetime.now(timezone.utc)
@@ -136,6 +170,12 @@ def filter_recent(entries, days: int = 30):
 def make_paginated_view(entries, list_title: str, color: discord.Color, link_label: str = "Read/Listen"):
     '''
     Creates a paginated entry for each given RSS source
+    
+    Args:
+        entries (dictionary): Dictionary of entries to add to page
+        list_title (str): Title of given source
+        color (discord.Color): Color used for the paginator
+        link_label (str): Label for the link to the source
     '''
     
     per_page = 1
@@ -186,6 +226,15 @@ def make_paginated_view(entries, list_title: str, color: discord.Color, link_lab
     return build_embed(0), Paginator()
 
 def make_ctf_paginated_view(entries, list_title: str, color: discord.Color):
+    '''
+    Creates a paginated entry for each given RSS source
+    
+    Args:
+        entries (dictionary): Dictionary of entries to add to page
+        list_title (str): Title of given source
+        color (discord.Color): Color used for the paginator
+    '''
+    
     per_page = 3
     pages = [entries[i:i+per_page] for i in range(0, len(entries), per_page)]
 

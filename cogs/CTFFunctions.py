@@ -1,26 +1,21 @@
+# Imports
 import discord
+import sqlite3
+
 from discord.ext import commands
 from discord import app_commands
 from datetime import datetime, timedelta, timezone
 
-import feedparser
-import sqlite3
-
-from dateutil import parser as dateparser
-from .FeedUtils import parse_ctf_feed, clean_summary, make_ctf_paginated_view
-
 # Token
 from BotOfSin import GUILD_ID
+from .FeedUtils import parse_ctf_feed, make_ctf_paginated_view
 
-# ------------------ DB Setup ------------------
+# ------------------ Queue DB Setup ------------------
 conn = sqlite3.connect("ctf_ranks.db")
 cursor = conn.cursor()
-
-# Queue database
 cursor.execute(
     "CREATE TABLE IF NOT EXISTS queue (ctf_name TEXT PRIMARY KEY, start_time INTEGER, link TEXT)"
 )
-
 conn.commit()
 # ------------------ DB Setup End ------------------
 
@@ -35,30 +30,17 @@ def fetch_past_ctfs():
     return parse_ctf_feed(PAST_FEED)
 # ------------------ Feed Sources End ------------------
 
-
-
 # ------------------ CTF Commands Cog ------------------
-'''
-Commands
-
-/ping: Sanity Check 
-/week: Shows CTFs happening within 7 days
-/month: Shows CTFs happening within the current month
-
-/addctf <ctf>: Adds a given CTF to the queue DB
-/queue: Dumps the queue DB
-/dequeue <ctf>: Removes a CTF from the queue DB
-'''
 class CTFCommands(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    # /ping
+    # /ping - sanity check
     @app_commands.command(name="ping", description="Sanity check")
     async def ping(self, interaction: discord.Interaction):
         await interaction.response.send_message("Pong!")
 
-    # /week
+    # /week - shows CTFs happening within 7 days
     @app_commands.command(name="week", description="Show CTFs in the next 7 days")
     async def week(self, interaction: discord.Interaction):
         now = datetime.now(timezone.utc)
@@ -72,7 +54,7 @@ class CTFCommands(commands.Cog):
         embed, view = make_ctf_paginated_view(ctfs, "CTFs in Next 7 Days", discord.Color.fuchsia())
         await interaction.response.send_message(embed=embed, view=view)
 
-    # /month
+    # /month - shows CTFs happening in the current month
     @app_commands.command(name="month", description="Show CTFs this month")
     async def month(self, interaction: discord.Interaction):
         now = datetime.now(timezone.utc)
@@ -143,7 +125,6 @@ class CTFCommands(commands.Cog):
         cursor.execute("DELETE FROM queue WHERE ctf_name = ?", (row[0],))
         conn.commit()
         await interaction.response.send_message(f"Removed **{row[0]}** from the queue.")
-
 # ------------------ CTF Commands Cog End ------------------
 
 # Discord Setup
