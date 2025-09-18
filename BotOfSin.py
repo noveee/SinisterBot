@@ -2,6 +2,7 @@
 import json
 import discord
 from discord.ext import commands
+from cogs.FeedUtils import init_db
 
 # Load config for Token/ID Setup
 with open("config.json", "r") as f:
@@ -19,6 +20,7 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 @bot.event
 async def on_ready():
     print(f"Logged in as {bot.user}")
+    init_db()
     try:
         synced = await bot.tree.sync(guild=discord.Object(id=GUILD_ID))
         print(f"Synced {len(synced)} commands to guild {GUILD_ID}")
@@ -40,6 +42,8 @@ async def main():
 
     /portarticles: Shows all portswigger articles from a given a date
     /portsearch: Searches all portswigger articles for a given term
+    /cyberepisodes: Shows CyberWire Daily episodes from a given date
+    /cybersearch: Searches all CyberWire Daily episodes for a given term
     /ctbepisodes: Shows all ctbb episodes from a given a date
     /ctbsearch: Searches all ctbb episodes for a given term
     '''

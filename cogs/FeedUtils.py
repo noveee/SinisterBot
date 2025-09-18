@@ -1,11 +1,46 @@
 import discord
 import feedparser
 import re
+import sqlite3
 
 from html import unescape
 from datetime import datetime, timezone, timedelta  
 from dateutil import parser as dateparser
 
+# ------------------ Feed DB Setup ------------------
+DB_PATH = "feeds.db"
+
+def init_db():
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+    cur.execute("""CREATE TABLE IF NOT EXISTS feeds (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        url TEXT NOT NULL,
+        last_checked TIMESTAMP
+    )""")
+    cur.execute("""CREATE TABLE IF NOT EXISTS entries (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        feed_id INTEGER,
+        guid TEXT UNIQUE,
+        title TEXT,
+        link TEXT,
+        summary TEXT,
+        published TIMESTAMP,
+        audio TEXT,
+        posted BOOLEAN DEFAULT 0,
+        FOREIGN KEY(feed_id) REFERENCES feeds(id)
+    )""")
+    conn.commit()
+    conn.close()
+
+def insert_feed(name, url):
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+    cur.execute("INSERT INTO feeds (name, url) VALUES (?, ?)", (name, url))
+    conn.commit()
+    conn.close()
+# ------------------ Feed DB Setup End ------------------
 
 # ------------------ HTML Cleaners ------------------
 def clean_summary(summary: str, max_length: int = 1000) -> str:
@@ -212,7 +247,7 @@ def make_paginated_view(entries, list_title: str, color: discord.Color, link_lab
     # Good ole paginator
     class Paginator(discord.ui.View):
         def __init__(self):
-            super().__init__(timeout=500)
+            super().__init__(timeout=1000)
             self.page = 0
 
         @discord.ui.button(label="⬅️", style=discord.ButtonStyle.secondary)
