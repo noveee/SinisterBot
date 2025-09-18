@@ -2,6 +2,8 @@
 Usage notes and such to be added... 
 
 ---
-## Adding
-- CTF Queuing 
-- Better RSS parsing
+## Drawing Board
+- Paging for CTF feed
+- News paging that combines all sources 
+- Condensing code further (reducing repetition in feed parsing mainly)
+- Automatic posting/refreshing 
