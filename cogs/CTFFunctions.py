@@ -15,11 +15,6 @@ from BotOfSin import GUILD_ID
 conn = sqlite3.connect("ctf_ranks.db")
 cursor = conn.cursor()
 
-# Rank database
-cursor.execute(
-    "CREATE TABLE IF NOT EXISTS ranks (ctf_name TEXT PRIMARY KEY, rank TEXT)"
-)
-
 # Queue database
 cursor.execute(
     "CREATE TABLE IF NOT EXISTS queue (ctf_name TEXT PRIMARY KEY, start_time INTEGER, link TEXT)"
@@ -147,48 +142,6 @@ class CTFCommands(commands.Cog):
             msg += f"- {c['title']} | <t:{ts}:R> | <t:{ts}:F> | {c['link']}\n" # Title | Time Left | CTF Date | Link
         await interaction.response.send_message(msg)
 
-    # /rank
-    @app_commands.command(name="rank", description="Save rank for a CTF")
-    
-    # Saves CTF rank in DB and replaces rank if there is an existing one
-    async def rank(self, interaction: discord.Interaction, ctf_name: str, rank: str):
-        cursor.execute(
-            "REPLACE INTO ranks (ctf_name, rank) VALUES (?, ?)", (ctf_name, rank)
-        )
-        conn.commit()
-        await interaction.response.send_message(f"Saved {ctf_name}: {rank}")
-
-    # /getrank
-    @app_commands.command(name="getrank", description="Get rank for a CTF")
-    
-    # Gets a given CTF rank from the DB 
-    async def getrank(self, interaction: discord.Interaction, ctf_name: str):
-        cursor.execute("SELECT rank FROM ranks WHERE ctf_name = ?", (ctf_name,))
-        r = cursor.fetchone()
-        if r:
-            await interaction.response.send_message(f"{ctf_name}: {r[0]}")
-        else:
-            await interaction.response.send_message(f"No rank found for {ctf_name}.")
-
-    # /allranks
-    @app_commands.command(name="allranks", description="Show all saved CTF ranks")
-    
-    # Dumps the entire rank DB 
-    async def allranks(self, interaction: discord.Interaction):
-        cursor.execute("SELECT ctf_name, rank FROM ranks")
-        rows = cursor.fetchall()
-        
-        # Incase a DB has not been created
-        if not rows:
-            await interaction.response.send_message("No ranks saved yet.")
-            return
-        
-        # Creating message variable that outputs all ranks in a clean format 
-        msg = "**Saved CTF Ranks:**\n"
-        for ctf, rank in rows:
-            msg += f"- {ctf}: {rank}\n"
-        await interaction.response.send_message(msg)
-    
     # /addctf
     @app_commands.command(name="addctf", description="Add a CTF to the signup queue")
 
