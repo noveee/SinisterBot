@@ -166,6 +166,8 @@ def filter_recent(entries, days: int = 30):
     now = datetime.now(timezone.utc)
     cutoff = now - timedelta(days=days)
     return [e for e in entries if e["published"] and e["published"] >= cutoff]
+# ------------------ Filtering ------------------
+
 # ------------------ Embed Pagination ------------------
 def make_paginated_view(entries, list_title: str, color: discord.Color, link_label: str = "Read/Listen"):
     '''

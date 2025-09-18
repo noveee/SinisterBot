@@ -38,10 +38,10 @@ async def main():
     /queue: Dumps the queue DB
     /dequeue <ctf>: Removes a CTF from the queue DB
 
-    /ctfinfo <ctf>: Prints raw info for given CTF 
-    /debugctfs: Prints full raw RSS feed and creates file 
-    /debugraw; Prints raw info for the most recent CTF
-
+    /portarticles: Shows all portswigger articles from a given a date
+    /portsearch: Searches all portswigger articles for a given term
+    /ctbepisodes: Shows all ctbb episodes from a given a date
+    /ctbsearch: Searches all ctbb episodes for a given term
     '''
     
     await bot.load_extension("cogs.CTFFunctions")

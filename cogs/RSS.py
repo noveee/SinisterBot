@@ -16,7 +16,7 @@ class NewsCommands(commands.Cog):
         self.bot = bot
 
     # ------------------ PortSwigger Commands ------------------
-    # /portarticles
+    # /portarticles - shows all portswigger articles from a given a date
     @app_commands.command(name="portarticles", description="List PortSwigger research articles from the past 60 days")
     async def portarticles(self, interaction: discord.Interaction):
         await interaction.response.defer()
@@ -28,7 +28,7 @@ class NewsCommands(commands.Cog):
         embed, view = make_paginated_view(recent, "PortSwigger Research - Past 60 Days", discord.Color.orange(), "Read")
         await interaction.followup.send(embed=embed, view=view)
 
-    # /portsearch
+    # /portsearch - searches all portswigger articles for a given term
     @app_commands.command(name="portsearch", description="Search PortSwigger articles")
     async def portsearch(self, interaction: discord.Interaction, query: str):
         await interaction.response.defer()
@@ -56,7 +56,7 @@ class NewsCommands(commands.Cog):
     # ------------------ PortSwigger Commands End ------------------
 
     # ------------------ CTBB Podcast Commands ------------------
-    # /ctbepisodes
+    # /ctbepisodes - shows all ctbb episodes from a given a date
     @app_commands.command(name="ctbepisodes", description="List CTBB podcast episodes from the past 30 days")
     async def ctbepisodes(self, interaction: discord.Interaction):
         await interaction.response.defer()
@@ -68,7 +68,7 @@ class NewsCommands(commands.Cog):
         embed, view = make_paginated_view(recent, "CTBB Podcast - Past 30 Days", discord.Color.brand_red(), "Listen")
         await interaction.followup.send(embed=embed, view=view)
 
-    # /ctbsearch
+    # /ctbsearch - searches all ctbb episodes for a given term
     @app_commands.command(name="ctbsearch", description="Search CTBB podcast episodes")
     async def ctbsearch(self, interaction: discord.Interaction, query: str):
         await interaction.response.defer()
