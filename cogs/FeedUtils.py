@@ -92,6 +92,35 @@ def parse_feed(feed_url: str, include_audio: bool = False):
             "raw": entry
         })
     return results
+
+def parse_ctf_feed(feed_url: str):
+    '''
+    Specific handler for CTFtime source
+    '''
+    
+    feed = feedparser.parse(feed_url)
+    results = []
+    for entry in feed.entries:
+        start_date = None
+        if hasattr(entry, "start_date"):
+            try:
+                start_date = dateparser.parse(entry.start_date).astimezone(timezone.utc)
+            except Exception:
+                pass
+        elif hasattr(entry, "published"):
+            try:
+                start_date = dateparser.parse(entry.published).astimezone(timezone.utc)
+            except Exception:
+                pass
+        
+        results.append({
+            "title": entry.get("title", "Unknown"),
+            "link": entry.get("link", ""),
+            "summary": entry.get("summary", ""),
+            "start_date": start_date,
+            "raw": entry
+        })
+    return results
 # ------------------ Feed Parsing End ------------------
 
 # ------------------ Filtering ------------------
@@ -103,7 +132,6 @@ def filter_recent(entries, days: int = 30):
     now = datetime.now(timezone.utc)
     cutoff = now - timedelta(days=days)
     return [e for e in entries if e["published"] and e["published"] >= cutoff]
-
 # ------------------ Embed Pagination ------------------
 def make_paginated_view(entries, list_title: str, color: discord.Color, link_label: str = "Read/Listen"):
     '''
@@ -140,6 +168,88 @@ def make_paginated_view(entries, list_title: str, color: discord.Color, link_lab
         return embed
 
     # Good ole paginator
+    class Paginator(discord.ui.View):
+        def __init__(self):
+            super().__init__(timeout=500)
+            self.page = 0
+
+        @discord.ui.button(label="⬅️", style=discord.ButtonStyle.secondary)
+        async def previous(self, interaction_btn: discord.Interaction, button: discord.ui.Button):
+            self.page = (self.page - 1) % len(pages)
+            await interaction_btn.response.edit_message(embed=build_embed(self.page), view=self)
+
+        @discord.ui.button(label="➡️", style=discord.ButtonStyle.secondary)
+        async def next(self, interaction_btn: discord.Interaction, button: discord.ui.Button):
+            self.page = (self.page + 1) % len(pages)
+            await interaction_btn.response.edit_message(embed=build_embed(self.page), view=self)
+
+    return build_embed(0), Paginator()
+
+def make_ctf_paginated_view(entries, list_title: str, color: discord.Color):
+    per_page = 3
+    pages = [entries[i:i+per_page] for i in range(0, len(entries), per_page)]
+
+    def extract_field(summary: str, label: str):
+        pattern = rf"{label}:\s*([^\n\r<]+)"
+        match = re.search(pattern, summary, re.IGNORECASE)
+        if match:
+            return match.group(1).strip()
+        return "Unknown"
+
+    def extract_official_url(entry, summary: str):
+        pattern = r"Official URL:\s*([^\n\r<]+)"
+        match = re.search(pattern, summary, re.IGNORECASE)
+        if match:
+            return match.group(1).strip()
+
+        raw = entry.get("raw")
+        if raw:
+            if "official_url" in raw:
+                return raw["official_url"]
+            if "url" in raw:
+                return raw["url"]
+            if "link" in raw and "ctftime.org/event" not in raw["link"]:
+                return raw["link"]
+
+        return "Unknown"
+
+    def build_embed(page_index: int):
+        embed = discord.Embed(title=list_title, color=color)
+
+        for entry in pages[page_index]:
+            summary = clean_summary(entry["summary"], max_length=400)
+
+            if entry.get("start_date"):
+                ts = int(entry["start_date"].timestamp())
+                date_str = f"<t:{ts}:F> (<t:{ts}:R>)"
+            elif entry.get("published"):
+                ts = int(entry["published"].timestamp())
+                date_str = f"<t:{ts}:F> (<t:{ts}:R>)"
+            else:
+                date_str = "Unknown"
+
+            weight = extract_field(summary, "Weight")
+            format_ = extract_field(summary, "Format")
+            official_url = extract_official_url(entry, summary)
+
+            if official_url != "Unknown":
+                official_url_val = f"[Visit Site]({official_url})"
+            else:
+                official_url_val = "Unknown"
+
+            field_val = (
+                f"**Date:** {date_str}\n"
+                f"**Weight:** {weight}\n"
+                f"**Format:** {format_}\n"
+                f"**Official URL:** {official_url_val}\n"
+                f"[CTFTime Link]({entry['link']})"
+            )
+
+            embed.add_field(name=entry["title"], value=field_val, inline=False)
+
+        embed.set_footer(text=f"Page {page_index+1}/{len(pages)} — {list_title}")
+        return embed
+
     class Paginator(discord.ui.View):
         def __init__(self):
             super().__init__(timeout=500)

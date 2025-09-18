@@ -32,6 +32,7 @@ async def main():
     /ping: Sanity Check 
     /week: Shows CTFs happening within 7 days
     /month: Shows CTFs happening within the current month
+    
 
     /addctf <ctf>: Adds a given CTF to the queue DB
     /queue: Dumps the queue DB
