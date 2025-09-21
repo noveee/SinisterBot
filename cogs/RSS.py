@@ -4,10 +4,12 @@ import asyncio
 import sqlite3
 from discord.ext import commands
 from discord import app_commands
+from datetime import datetime, timezone, timedelta
+from dateutil import parser as dateparser
 
 # Token
 from BotOfSin import GUILD_ID, CHANNEL_ID
-from .FeedUtils import parse_feed, filter_recent, make_paginated_view, clean_summary, clean_ctbb_summary, init_db
+from .FeedUtils import parse_feed, filter_recent, make_paginated_view, clean_summary, clean_ctbb_summary, init_db, DB_PATH
 
 # Feeds
 PORTSWIGGER_FEED = "https://portswigger.net/research/rss"
@@ -17,45 +19,135 @@ CTBB_FEED = "https://media.rss.com/ctbbpodcast/feed.xml"
 class NewsCommands(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self._bg_task = None
+
+    async def cog_load(self):
+        self._bg_task = asyncio.create_task(self.feed_loop())
+
+    async def cog_unload(self):
+        if self._bg_task:
+            self._bg_task.cancel()
      
     # ------------------ Feed DB Setup ------------------
     async def feed_loop(self):
         await self.bot.wait_until_ready()
         while not self.bot.is_closed():
-            await self.check_feeds()
-            await asyncio.sleep(60 * 60 * 12)  # every 12h
+            try:
+                await self.check_feeds()
+            except Exception as e:
+                print(f"[feed_loop] unexpected error: {e}")
+            await asyncio.sleep(60 * 60)
 
     async def check_feeds(self):
-        conn = sqlite3.connect(feed_db.DB_PATH)
-        cur = conn.cursor()
-        cur.execute("SELECT id, name, url FROM feeds")
-        feeds = cur.fetchall()
+        
+        # Error Handling
+        try:
+            conn = sqlite3.connect(DB_PATH)
+            cur = conn.cursor()
+        except Exception as e:
+            print(f"[check_feeds] DB connect error: {e}")
+            return
 
+        try:
+            cur.execute("SELECT id, name, url FROM feeds")
+            feeds = cur.fetchall()
+        except Exception as e:
+            print(f"[check_feeds] DB fetch feeds error: {e}")
+            conn.close()
+            return
+        
+        # Beginning of feed checking
         for feed_id, name, url in feeds:
-            entries = parse_feed(url, include_audio=True)
+            try:
+                entries = parse_feed(url, include_audio=True)
+            except Exception as e:
+                print(f"[check_feeds] parse_feed failed for {name} ({url}): {e}")
+                continue
+
             for e in entries:
-                guid = e["raw"].get("id") or e["link"]
-                cur.execute("SELECT 1 FROM entries WHERE guid = ?", (guid,))
-                if cur.fetchone():
-                    continue  # Entry already in DB
+                # Creating stable GUID and using entry raw id if present
+                guid = None
+                raw = e.get("raw")
+                try:
+                    if isinstance(raw, dict):
+                        guid = raw.get("id") or raw.get("guid") or e.get("link")
+                    else:
+                        guid = raw.get("id") if hasattr(raw, "get") else e.get("link")
+                except Exception:
+                    guid = e.get("link")
 
-                # Insert old entry into DB
-                cur.execute("""INSERT INTO entries
-                    (feed_id, guid, title, link, summary, published, audio, posted)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, 0)""",
-                    (feed_id, guid, e["title"], e["link"], e["summary"],
-                     e["published"].isoformat() if e["published"] else None,
-                     e["audio"])
-                )
-                conn.commit()
+                # Avoiding duplicate entries
+                try:
+                    cur.execute("SELECT 1 FROM entries WHERE guid = ?", (guid,))
+                    if cur.fetchone():
+                        continue
+                except Exception as exc:
+                    print(f"[check_feeds] DB select error for guid {guid}: {exc}")
+                    continue
 
-                # Post update 
-                channel = self.bot.get_channel(CHANNEL_ID)
-                await channel.send(f"**{name}** just released: {e['title']} {e['link']}")
-                cur.execute("UPDATE entries SET posted = 1 WHERE guid = ?", (guid,))
-                conn.commit()
+                # Preparing published db
+                published_val = None
+                if e.get("published"):
+                    try:
+                        published_val = e["published"].isoformat()
+                    except Exception:
+                        published_val = None
 
-        conn.close()
+                # Adding new entry
+                try:
+                    cur.execute(
+                        """INSERT INTO entries
+                        (feed_id, guid, title, link, summary, published, audio, posted)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, 0)""",
+                        (
+                            feed_id,
+                            guid,
+                            e.get("title"),
+                            e.get("link"),
+                            e.get("summary"),
+                            published_val,
+                            e.get("audio"),
+                        ),
+                    )
+                    conn.commit()
+                except Exception as exc:
+                    print(f"[check_feeds] DB insert failed for guid {guid}: {exc}")
+                    continue
+
+                chan_id = int(CHANNEL_ID) if not isinstance(CHANNEL_ID, int) else CHANNEL_ID
+                channel = self.bot.get_channel(chan_id)
+                if channel is None:
+                    try:
+                        channel = await self.bot.fetch_channel(chan_id)
+                    except Exception as exc:
+                        print(f"[check_feeds] couldn't fetch channel {chan_id}: {exc}")
+
+                if channel:
+                    try:
+                        await channel.send(f"**{name}** just released: {e.get('title')} {e.get('link')}")
+                        cur.execute("UPDATE entries SET posted = 1 WHERE guid = ?", (guid,))
+                        conn.commit()
+                    except Exception as exc:
+                        print(f"[check_feeds] failed sending or updating posted for guid {guid}: {exc}")
+
+        # Purge entries older than 90 days
+        try:
+            cutoff = datetime.now(timezone.utc) - timedelta(days=90)
+            cur.execute("SELECT guid, published FROM entries WHERE published IS NOT NULL")
+            rows = cur.fetchall()
+            for guid, published_str in rows:
+                try:
+                    pub_dt = dateparser.parse(published_str).astimezone(timezone.utc)
+                    if pub_dt < cutoff:
+                        cur.execute("DELETE FROM entries WHERE guid = ?", (guid,))
+                except Exception:
+                    # Skip malformed dates
+                    continue
+            conn.commit()
+        except Exception as exc:
+            print(f"[check_feeds] purge error: {exc}")
+        finally:
+            conn.close()
     # ------------------ Feed DB Setup End ------------------
 
     # ------------------ PortSwigger Commands ------------------
