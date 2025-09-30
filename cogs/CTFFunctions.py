@@ -13,11 +13,9 @@ from .FeedUtils import parse_ctf_feed, make_ctf_paginated_view
 
 # ------------------ Queue DB Setup ------------------
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DB_PATH = os.path.join(BASE_DIR, "ctf_ranks.db")
+DB_PATH = os.path.join(BASE_DIR, "ctfs.db")
 
 conn = sqlite3.connect(DB_PATH)
-
-conn = sqlite3.connect("ctf_ranks.db")
 cursor = conn.cursor()
 cursor.execute(
     "CREATE TABLE IF NOT EXISTS queue (ctf_name TEXT PRIMARY KEY, start_time INTEGER, link TEXT)"
