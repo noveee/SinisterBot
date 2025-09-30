@@ -9,7 +9,7 @@ from dateutil import parser as dateparser
 
 # Token
 from BotOfSin import GUILD_ID, CHANNEL_ID
-from .FeedUtils import parse_feed, filter_recent, make_paginated_view, clean_summary, clean_ctbb_summary, init_db, DB_PATH
+from .FeedUtils import parse_feed, filter_recent, make_paginated_view, clean_summary, clean_ctbb_summary
 
 # Feeds
 PORTSWIGGER_FEED = "https://portswigger.net/research/rss"

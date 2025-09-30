@@ -1,4 +1,5 @@
 # Imports
+import os
 import discord
 import sqlite3
 
@@ -11,6 +12,11 @@ from BotOfSin import GUILD_ID
 from .FeedUtils import parse_ctf_feed, make_ctf_paginated_view
 
 # ------------------ Queue DB Setup ------------------
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DB_PATH = os.path.join(BASE_DIR, "ctf_ranks.db")
+
+conn = sqlite3.connect(DB_PATH)
+
 conn = sqlite3.connect("ctf_ranks.db")
 cursor = conn.cursor()
 cursor.execute(
